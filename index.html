@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Once Regalis | Galería</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 20px;
+  background: #17131e; color: white;
+  font-family: system-ui, sans-serif;
+}
+h1 { color: #d7b7ff; }
+#status { color: #c9bdcf; }
+#gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+  gap: 12px;
+}
+figure {
+  margin: 0; background: #292231;
+  border-radius: 12px; overflow: hidden;
+}
+figure img {
+  display: block; width: 100%; height: 150px;
+  object-fit: contain; background: #211b29;
+  cursor: pointer;
+}
+figcaption {
+  padding: 8px; font-size: 12px;
+  overflow-wrap: anywhere;
+}
+#viewer {
+  display: none; position: fixed; inset: 0;
+  background: #08060cf2; z-index: 5;
+  align-items: center; justify-content: center;
+  flex-direction: column; padding: 16px;
+}
+#viewer img {
+  max-width: 100%; max-height: 78vh;
+  object-fit: contain;
+}
+button {
+  padding: 12px 18px; margin: 10px;
+  border: 0; border-radius: 8px;
+  background: #d7b7ff; color: #20132d;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+<h1>Once Regalis FC 💜🤍</h1>
+<p id="status">Cargando imágenes...</p>
+<div id="gallery"></div>
+
+<div id="viewer" role="dialog" aria-modal="true">
+  <button id="close">✕ Cerrar</button>
+  <img id="large" alt="Imagen ampliada">
+  <p id="caption"></p>
+  <button id="prev">← Anterior</button>
+  <button id="next">Siguiente →</button>
+</div>
+
+<script>
+const owner = "hipolitotorrescdylan1j18-lang";
+const repo = "once-regalis-logo";
+const gallery = document.getElementById("gallery");
+const status = document.getElementById("status");
+const viewer = document.getElementById("viewer");
+const large = document.getElementById("large");
+const caption = document.getElementById("caption");
+let images = [];
+let current = 0;
+
+async function loadImages() {
+  try {
+    let page = 1;
+    let files = [];
+
+    while (true) {
+      const url =
+        `https://api.github.com/repos/${owner}/${repo}/contents/?per_page=100&page=${page}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error("No se pudo consultar el repositorio.");
+      }
+
+      const batch = await response.json();
+      if (!Array.isArray(batch)) {
+        throw new Error("Respuesta inesperada de GitHub.");
+      }
+
+      files.push(...batch);
+      if (batch.length < 100) break;
+      page++;
+    }
+
+    images = files.filter(file =>
+      file.type === "file" &&
+      /\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(file.name)
+    );
+
+    images.sort((a, b) => a.name.localeCompare(b.name));
+
+    status.textContent = `${images.length} imágenes encontradas`;
+
+    for (const [index, file] of images.entries()) {
+      const figure = document.createElement("figure");
+      const img = document.createElement("img");
+      const name = document.createElement("figcaption");
+
+      img.src = file.download_url;
+      img.alt = file.name;
+      img.loading = "lazy";
+      name.textContent = file.name;
+
+      img.addEventListener("click", () => showImage(index));
+      figure.append(img, name);
+      gallery.appendChild(figure);
+    }
+
+    if (!images.length) {
+      status.textContent = "No se encontraron imágenes en la carpeta principal.";
+    }
+  } catch (error) {
+    status.textContent = error.message +
+      " Comprueba que el repositorio sea público e inténtalo más tarde.";
+  }
+}
+
+function showImage(index) {
+  current = (index + images.length) % images.length;
+  large.src = images[current].download_url;
+  caption.textContent = images[current].name;
+  viewer.style.display = "flex";
+}
+
+document.getElementById("close").onclick =
+  () => { viewer.style.display = "none"; large.src = ""; };
+document.getElementById("prev").onclick =
+  () => showImage(current - 1);
+document.getElementById("next").onclick =
+  () => showImage(current + 1);
+
+loadImages();
+</script>
+</body>
+</html>
