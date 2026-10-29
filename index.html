@@ -4,108 +4,224 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Once Regalis | Galería</title>
+<meta name="theme-color" content="#17131e">
+<title>Once Regalis FC | Galería</title>
+
 <style>
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 body {
-  margin: 0; padding: 20px;
-  background: #17131e; color: white;
+  margin: 0;
+  padding: 20px;
+  background: #17131e;
+  color: white;
   font-family: system-ui, sans-serif;
 }
-h1 { color: #d7b7ff; }
-#status { color: #c9bdcf; }
-#gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
-  gap: 12px;
+
+header {
+  text-align: center;
+  margin-bottom: 24px;
 }
-figure {
-  margin: 0; background: #292231;
-  border-radius: 12px; overflow: hidden;
+
+h1 {
+  color: #d7b7ff;
+  margin-bottom: 8px;
 }
-figure img {
-  display: block; width: 100%; height: 150px;
-  object-fit: contain; background: #211b29;
-  cursor: pointer;
-}
-figcaption {
-  padding: 8px; font-size: 12px;
+
+#status {
+  color: #c9bdcf;
   overflow-wrap: anywhere;
 }
-#viewer {
-  display: none; position: fixed; inset: 0;
-  background: #08060cf2; z-index: 5;
-  align-items: center; justify-content: center;
-  flex-direction: column; padding: 16px;
+
+#gallery {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(135px, 1fr)
+  );
+  gap: 12px;
 }
+
+figure {
+  margin: 0;
+  background: #292231;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+figure img {
+  display: block;
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+  background: #211b29;
+  cursor: pointer;
+}
+
+figcaption {
+  padding: 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  color: #e6dced;
+}
+
+#viewer {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #08060cf5;
+  z-index: 5;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 16px;
+}
+
 #viewer img {
-  max-width: 100%; max-height: 78vh;
+  max-width: 100%;
+  max-height: 65vh;
   object-fit: contain;
 }
+
+#caption {
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
 button {
-  padding: 12px 18px; margin: 10px;
-  border: 0; border-radius: 8px;
-  background: #d7b7ff; color: #20132d;
+  padding: 12px 18px;
+  margin: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: #d7b7ff;
+  color: #20132d;
   font-weight: bold;
+  cursor: pointer;
+}
+
+button:focus-visible,
+figure img:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+footer {
+  margin-top: 28px;
+  text-align: center;
+  color: #c9bdcf;
+  font-size: 12px;
 }
 </style>
 </head>
-<body>
-<h1>Once Regalis FC 💜🤍</h1>
-<p id="status">Cargando imágenes...</p>
-<div id="gallery"></div>
 
-<div id="viewer" role="dialog" aria-modal="true">
+<body>
+<header>
+  <h1>Once Regalis FC 💜🤍</h1>
+  <p>Galería oficial de imágenes</p>
+  <p id="status" role="status" aria-live="polite">
+    Cargando imágenes...
+  </p>
+</header>
+
+<main id="gallery"></main>
+
+<div id="viewer" role="dialog" aria-modal="true"
+     aria-label="Imagen ampliada">
   <button id="close">✕ Cerrar</button>
   <img id="large" alt="Imagen ampliada">
   <p id="caption"></p>
-  <button id="prev">← Anterior</button>
-  <button id="next">Siguiente →</button>
+  <div class="controls">
+    <button id="prev">← Anterior</button>
+    <button id="next">Siguiente →</button>
+  </div>
 </div>
+
+<footer>
+  Once Regalis FC · 💜🤍
+</footer>
 
 <script>
 const owner = "hipolitotorrescdylan1j18-lang";
 const repo = "once-regalis-logo";
+const branch = "main";
+
 const gallery = document.getElementById("gallery");
 const status = document.getElementById("status");
 const viewer = document.getElementById("viewer");
 const large = document.getElementById("large");
 const caption = document.getElementById("caption");
+const closeButton = document.getElementById("close");
+
 let images = [];
 let current = 0;
 
 async function loadImages() {
+  status.textContent = "Buscando imágenes en GitHub...";
+
   try {
     let page = 1;
     let files = [];
 
     while (true) {
       const url =
-        `https://api.github.com/repos/${owner}/${repo}/contents/?per_page=100&page=${page}`;
-      const response = await fetch(url);
+        `https://api.github.com/repos/${owner}/${repo}` +
+        `/contents/?ref=${branch}&per_page=100&page=${page}`;
+
+      const response = await fetch(url, {
+        headers: {
+          Accept: "application/vnd.github+json"
+        }
+      });
 
       if (!response.ok) {
-        throw new Error("No se pudo consultar el repositorio.");
+        throw new Error(
+          `Error de GitHub: ${response.status} ` +
+          `${response.statusText || ""}.`
+        );
       }
 
       const batch = await response.json();
+
       if (!Array.isArray(batch)) {
-        throw new Error("Respuesta inesperada de GitHub.");
+        throw new Error(
+          "GitHub no devolvió una lista de archivos."
+        );
       }
 
       files.push(...batch);
+
       if (batch.length < 100) break;
+
       page++;
     }
 
-    images = files.filter(file =>
-      file.type === "file" &&
-      /\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(file.name)
-    );
+    images = files
+      .filter(file =>
+        file.type === "file" &&
+        /\.(png|jpe?g|gif|webp|bmp|avif)$/i
+          .test(file.name) &&
+        file.download_url
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-    images.sort((a, b) => a.name.localeCompare(b.name));
+    if (images.length === 0) {
+      status.textContent =
+        "No se encontraron imágenes en la carpeta principal.";
+      return;
+    }
 
-    status.textContent = `${images.length} imágenes encontradas`;
+    status.textContent =
+      `${images.length} imágenes encontradas 💜`;
+
+    gallery.replaceChildren();
 
     for (const [index, file] of images.entries()) {
       const figure = document.createElement("figure");
@@ -115,35 +231,74 @@ async function loadImages() {
       img.src = file.download_url;
       img.alt = file.name;
       img.loading = "lazy";
-      name.textContent = file.name;
+      img.decoding = "async";
+      img.tabIndex = 0;
 
       img.addEventListener("click", () => showImage(index));
+
+      img.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          showImage(index);
+        }
+      });
+
+      name.textContent = file.name;
+
       figure.append(img, name);
       gallery.appendChild(figure);
     }
-
-    if (!images.length) {
-      status.textContent = "No se encontraron imágenes en la carpeta principal.";
-    }
   } catch (error) {
-    status.textContent = error.message +
-      " Comprueba que el repositorio sea público e inténtalo más tarde.";
+    console.error("Error al cargar la galería:", error);
+
+    status.textContent =
+      `${error.message} ` +
+      "Comprueba tu conexión e inténtalo de nuevo.";
   }
 }
 
 function showImage(index) {
+  if (!images.length) return;
+
   current = (index + images.length) % images.length;
+
   large.src = images[current].download_url;
-  caption.textContent = images[current].name;
+  large.alt = images[current].name;
+  caption.textContent =
+    `${current + 1} de ${images.length}: ${images[current].name}`;
+
   viewer.style.display = "flex";
+  closeButton.focus();
 }
 
-document.getElementById("close").onclick =
-  () => { viewer.style.display = "none"; large.src = ""; };
-document.getElementById("prev").onclick =
-  () => showImage(current - 1);
-document.getElementById("next").onclick =
-  () => showImage(current + 1);
+function closeViewer() {
+  viewer.style.display = "none";
+  large.src = "";
+}
+
+closeButton.addEventListener("click", closeViewer);
+
+document.getElementById("prev").addEventListener(
+  "click",
+  () => showImage(current - 1)
+);
+
+document.getElementById("next").addEventListener(
+  "click",
+  () => showImage(current + 1)
+);
+
+viewer.addEventListener("click", event => {
+  if (event.target === viewer) closeViewer();
+});
+
+document.addEventListener("keydown", event => {
+  if (viewer.style.display !== "flex") return;
+
+  if (event.key === "Escape") closeViewer();
+  if (event.key === "ArrowLeft") showImage(current - 1);
+  if (event.key === "ArrowRight") showImage(current + 1);
+});
 
 loadImages();
 </script>
